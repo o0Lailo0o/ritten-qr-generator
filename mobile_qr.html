@@ -275,6 +275,76 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .qr-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .qr-item {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+        
+        .qr-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .qr-item-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+        }
+        
+        .qr-item-time {
+            font-size: 12px;
+            color: #666;
+            font-weight: normal;
+        }
+        
+        .qr-item-info {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .qr-item-code {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+        
+        .qr-item-code img {
+            border-radius: 8px;
+        }
+        
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .delete-btn:active {
+            transform: scale(0.9);
+            background: #cc0000;
+        }
     </style>
 </head>
 <body>
@@ -339,17 +409,20 @@
         
         <div class="card" id="qr-result">
             <div class="success-message">
-                ✅ QR Code Gegenereerd!
+                ✅ <span id="qr-count">0</span> QR Code(s) Gegenereerd!
             </div>
-            <div id="qr-code"></div>
+            
+            <div id="qr-list" class="qr-list"></div>
+            
             <div class="tip">
                 <strong>💡 Zo werkt het:</strong><br>
                 1. Houd dit scherm voor je webcam thuis<br>
                 2. Open de desktop app → "Scan QR Code"<br>
-                3. Rit wordt automatisch toegevoegd! 🎉
+                3. Scan elke QR code - ritten worden automatisch toegevoegd! 🎉
             </div>
-            <button type="button" class="btn btn-secondary" onclick="resetForm()">
-                ➕ Nieuwe Rit Toevoegen
+            
+            <button type="button" class="btn btn-secondary" onclick="clearAllQR()">
+                🗑️ Wis Alle QR Codes
             </button>
         </div>
         
@@ -368,16 +441,9 @@
             if (!value || value.trim() === '') return;
             
             let history = JSON.parse(localStorage.getItem(field + '_history') || '[]');
-            
-            // Remove if exists (to move to top)
             history = history.filter(item => item !== value);
-            
-            // Add to front
             history.unshift(value);
-            
-            // Keep max 5 items
             history = history.slice(0, 5);
-            
             localStorage.setItem(field + '_history', JSON.stringify(history));
         }
         
@@ -400,27 +466,74 @@
             });
         }
         
+        // QR Code opslag
+        let qrCodes = [];
+        
+        function saveQRCode(ritData, qrElement) {
+            const qrCode = {
+                id: Date.now(),
+                data: ritData,
+                timestamp: new Date().toISOString(),
+                qrDataUrl: qrElement.querySelector('img').src
+            };
+            
+            qrCodes.push(qrCode);
+            updateQRList();
+        }
+        
+        function updateQRList() {
+            const container = document.getElementById('qr-list');
+            container.innerHTML = '';
+            
+            if (qrCodes.length === 0) return;
+            
+            qrCodes.forEach((qr, index) => {
+                const card = document.createElement('div');
+                card.className = 'qr-item';
+                card.innerHTML = `
+                    <div class="qr-item-header">
+                        <div class="qr-item-title">
+                            <strong>Rit ${qrCodes.length - index}</strong>
+                            <span class="qr-item-time">${new Date(qr.timestamp).toLocaleTimeString('nl-NL', {hour: '2-digit', minute: '2-digit'})}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteQR(${qr.id})" title="Verwijder">🗑️</button>
+                    </div>
+                    <div class="qr-item-info">
+                        📍 ${qr.data.start_locatie} → ${qr.data.eind_locatie}<br>
+                        📏 ${qr.data.kilometers} km • ${qr.data.rit_type}
+                    </div>
+                    <div class="qr-item-code">
+                        <img src="${qr.qrDataUrl}" alt="QR Code" width="150" height="150">
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        function deleteQR(id) {
+            if (confirm('Deze QR code verwijderen?')) {
+                qrCodes = qrCodes.filter(qr => qr.id !== id);
+                updateQRList();
+                if (qrCodes.length === 0) {
+                    document.getElementById('qr-result').classList.remove('show');
+                }
+            }
+        }
+        
+        function clearAllQR() {
+            if (confirm('Alle QR codes wissen?\n\n⚠️ Deze actie kan niet ongedaan gemaakt worden!')) {
+                qrCodes = [];
+                updateQRList();
+                document.getElementById('qr-result').classList.remove('show');
+                resetForm();
+            }
+        }
+        
         // Initialize
         window.onload = () => {
             loadHistory('start');
             loadHistory('eind');
             document.getElementById('start').focus();
-            
-            // Restore last values if page refreshed accidentally
-            const lastData = sessionStorage.getItem('lastRitData');
-            if (lastData) {
-                try {
-                    const data = JSON.parse(lastData);
-                    if (confirm('Wil je de vorige rit herstellen?')) {
-                        document.getElementById('start').value = data.start_locatie;
-                        document.getElementById('eind').value = data.eind_locatie;
-                        document.getElementById('km').value = data.kilometers;
-                        document.getElementById('type').value = data.rit_type;
-                        document.getElementById('doel').value = data.doel_omschrijving || '';
-                    }
-                    sessionStorage.removeItem('lastRitData');
-                } catch(e) {}
-            }
         };
         
         // Show history on focus
@@ -442,15 +555,12 @@
         function swapLocations() {
             const start = document.getElementById('start').value;
             const eind = document.getElementById('eind').value;
-            
             document.getElementById('start').value = eind;
             document.getElementById('eind').value = start;
         }
         
         function resetForm() {
             document.getElementById('rit-form').reset();
-            document.getElementById('qr-result').classList.remove('show');
-            document.getElementById('qr-code').innerHTML = '';
             document.getElementById('start').focus();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -473,21 +583,17 @@
                 timestamp: new Date().toISOString()
             };
             
-            // Save for recovery
-            sessionStorage.setItem('lastRitData', JSON.stringify(formData));
-            
             // Save to history
             saveToHistory('start', formData.start_locatie);
             saveToHistory('eind', formData.eind_locatie);
             
             try {
-                // Clear previous QR
-                document.getElementById('qr-code').innerHTML = '';
+                // Create temporary container for QR generation
+                const tempContainer = document.createElement('div');
                 
-                // Generate QR code (client-side!)
                 const qrData = JSON.stringify(formData);
                 
-                new QRCode(document.getElementById('qr-code'), {
+                new QRCode(tempContainer, {
                     text: qrData,
                     width: 300,
                     height: 300,
@@ -496,12 +602,20 @@
                     correctLevel: QRCode.CorrectLevel.L
                 });
                 
-                // Show result
+                // Wait for QR to render
                 setTimeout(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = '📱 Genereer QR Code';
+                    // Save QR code
+                    saveQRCode(formData, tempContainer);
+                    
+                    // Show result
                     document.getElementById('qr-result').classList.add('show');
                     document.getElementById('qr-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Reset form for next entry
+                    resetForm();
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '📱 Genereer QR Code';
                 }, 500);
                 
             } catch (error) {
@@ -509,13 +623,6 @@
                 btn.disabled = false;
                 btn.innerHTML = '📱 Genereer QR Code';
             }
-        });
-        
-        // PWA prompt for iOS
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
         });
     </script>
 </body>
