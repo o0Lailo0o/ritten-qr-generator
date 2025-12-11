@@ -409,7 +409,8 @@
         
         <div class="card" id="qr-result">
             <div class="success-message">
-                ✅ <span id="qr-count">0</span> QR Code(s) Gegenereerd!
+                ✅ <span id="qr-count">0</span> QR Code(s) Opgeslagen!
+                <br><small style="font-size: 12px; opacity: 0.9;">💾 Blijven bewaard bij refresh</small>
             </div>
             
             <div id="qr-list" class="qr-list"></div>
@@ -469,6 +470,7 @@
         // QR Code opslag
         let qrCodes = [];
         
+        // QR Code opslag in localStorage (persistent!)
         function saveQRCode(ritData, qrElement) {
             const qrCode = {
                 id: Date.now(),
@@ -478,7 +480,37 @@
             };
             
             qrCodes.push(qrCode);
+            
+            // NIEUW: Sla op in localStorage
+            saveQRsToStorage();
             updateQRList();
+        }
+        
+        function saveQRsToStorage() {
+            try {
+                localStorage.setItem('ritten_qr_codes', JSON.stringify(qrCodes));
+                console.log('✅ QR codes opgeslagen:', qrCodes.length);
+            } catch (e) {
+                console.error('❌ Opslaan mislukt:', e);
+                alert('Kon QR codes niet opslaan. Te veel data?');
+            }
+        }
+        
+        function loadQRsFromStorage() {
+            try {
+                const saved = localStorage.getItem('ritten_qr_codes');
+                if (saved) {
+                    qrCodes = JSON.parse(saved);
+                    console.log('✅ QR codes geladen:', qrCodes.length);
+                    if (qrCodes.length > 0) {
+                        document.getElementById('qr-result').classList.add('show');
+                        updateQRList();
+                    }
+                }
+            } catch (e) {
+                console.error('❌ Laden mislukt:', e);
+                qrCodes = [];
+            }
         }
         
         function updateQRList() {
@@ -513,7 +545,9 @@
         function deleteQR(id) {
             if (confirm('Deze QR code verwijderen?')) {
                 qrCodes = qrCodes.filter(qr => qr.id !== id);
+                saveQRsToStorage(); // NIEUW: Ook opslaan
                 updateQRList();
+                updateQRCount();
                 if (qrCodes.length === 0) {
                     document.getElementById('qr-result').classList.remove('show');
                 }
@@ -523,17 +557,32 @@
         function clearAllQR() {
             if (confirm('Alle QR codes wissen?\n\n⚠️ Deze actie kan niet ongedaan gemaakt worden!')) {
                 qrCodes = [];
+                saveQRsToStorage(); // NIEUW: Ook opslaan
                 updateQRList();
                 document.getElementById('qr-result').classList.remove('show');
                 resetForm();
             }
         }
         
-        // Initialize
+        function updateQRCount() {
+            const countElement = document.getElementById('qr-count');
+            if (countElement) {
+                countElement.textContent = qrCodes.length;
+            }
+        }
+        
+        // Initialize - LAAD OPGESLAGEN QR CODES!
         window.onload = () => {
             loadHistory('start');
             loadHistory('eind');
+            loadQRsFromStorage(); // NIEUW: Laad opgeslagen QR codes
+            updateQRCount(); // NIEUW: Update teller
             document.getElementById('start').focus();
+            
+            // Toon hoeveel QR codes er zijn
+            if (qrCodes.length > 0) {
+                console.log(`📱 ${qrCodes.length} opgeslagen QR codes geladen!`);
+            }
         };
         
         // Show history on focus
@@ -588,9 +637,7 @@
             saveToHistory('eind', formData.eind_locatie);
             
             try {
-                // Create temporary container for QR generation
                 const tempContainer = document.createElement('div');
-                
                 const qrData = JSON.stringify(formData);
                 
                 new QRCode(tempContainer, {
@@ -602,16 +649,16 @@
                     correctLevel: QRCode.CorrectLevel.L
                 });
                 
-                // Wait for QR to render
                 setTimeout(() => {
-                    // Save QR code
                     saveQRCode(formData, tempContainer);
+                    updateQRCount(); // NIEUW: Update teller
                     
-                    // Show result
                     document.getElementById('qr-result').classList.add('show');
-                    document.getElementById('qr-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.getElementById('qr-result').scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
                     
-                    // Reset form for next entry
                     resetForm();
                     
                     btn.disabled = false;
