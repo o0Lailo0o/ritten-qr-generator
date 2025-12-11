@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 Rit QR Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.95;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 15px;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            box-shadow: none;
+            margin-top: 15px;
+        }
+        
+        #qr-result {
+            display: none;
+            text-align: center;
+        }
+        
+        #qr-result.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        #qr-code {
+            margin: 25px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            display: inline-block;
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .tip {
+            background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%);
+            border-left: 4px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+        
+        .quick-km {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+        
+        .quick-km-btn {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .quick-km-btn:active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: scale(0.95);
+        }
+        
+        .history {
+            margin-top: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            border-radius: 10px;
+        }
+        
+        .history-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .history-item:active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .swap-btn {
+            position: absolute;
+            right: -45px;
+            top: 50%;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+        
+        .swap-btn:active {
+            transform: rotate(180deg) scale(0.9);
+        }
+        
+        @media (max-width: 600px) {
+            .swap-btn {
+                right: 10px;
+                top: -15px;
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Rit QR Generator</h1>
+            <p>Vul snel je rit in en scan thuis met webcam</p>
+            <span class="badge">✅ 100% Offline • Privacy First</span>
+        </div>
+        
+        <div class="card">
+            <form id="rit-form">
+                <div class="form-group" style="position: relative;">
+                    <label for="start">📍 Van *</label>
+                    <input type="text" id="start" name="start" required 
+                           placeholder="Bijv. Amsterdam Centraal"
+                           autocomplete="off">
+                    <div id="start-history" class="history"></div>
+                    <div class="swap-btn" onclick="swapLocations()" title="Wissel locaties">🔄</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="eind">🎯 Naar *</label>
+                    <input type="text" id="eind" name="eind" required 
+                           placeholder="Bijv. Rotterdam CS"
+                           autocomplete="off">
+                    <div id="eind-history" class="history"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="km">📏 Kilometers *</label>
+                    <input type="number" id="km" name="km" step="0.1" required 
+                           placeholder="Bijv. 75.5" min="0">
+                    <div class="quick-km">
+                        <button type="button" class="quick-km-btn" onclick="setKm(25)">25</button>
+                        <button type="button" class="quick-km-btn" onclick="setKm(50)">50</button>
+                        <button type="button" class="quick-km-btn" onclick="setKm(100)">100</button>
+                        <button type="button" class="quick-km-btn" onclick="setKm(150)">150</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="type">💼 Type Rit</label>
+                    <select id="type" name="type">
+                        <option value="zakelijk">💼 Zakelijk</option>
+                        <option value="privé">🏠 Privé</option>
+                        <option value="woon-werk">🚗 Woon-werk</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="doel">📝 Doel (optioneel)</label>
+                    <textarea id="doel" name="doel" rows="2"
+                           placeholder="Bijv. Klantbezoek, vergadering, etc."></textarea>
+                </div>
+                
+                <button type="submit" class="btn" id="generate-btn">
+                    📱 Genereer QR Code
+                </button>
+            </form>
+        </div>
+        
+        <div class="card" id="qr-result">
+            <div class="success-message">
+                ✅ QR Code Gegenereerd!
+            </div>
+            <div id="qr-code"></div>
+            <div class="tip">
+                <strong>💡 Zo werkt het:</strong><br>
+                1. Houd dit scherm voor je webcam thuis<br>
+                2. Open de desktop app → "Scan QR Code"<br>
+                3. Rit wordt automatisch toegevoegd! 🎉
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                ➕ Nieuwe Rit Toevoegen
+            </button>
+        </div>
+        
+        <div class="footer">
+            Made with ❤️ for Ritten Registratie Pro<br>
+            🔒 Jouw data blijft privé - alles lokaal opgeslagen
+        </div>
+    </div>
+    
+    <!-- QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script>
+        // LocalStorage helpers
+        function saveToHistory(field, value) {
+            if (!value || value.trim() === '') return;
+            
+            let history = JSON.parse(localStorage.getItem(field + '_history') || '[]');
+            
+            // Remove if exists (to move to top)
+            history = history.filter(item => item !== value);
+            
+            // Add to front
+            history.unshift(value);
+            
+            // Keep max 5 items
+            history = history.slice(0, 5);
+            
+            localStorage.setItem(field + '_history', JSON.stringify(history));
+        }
+        
+        function loadHistory(field) {
+            const history = JSON.parse(localStorage.getItem(field + '_history') || '[]');
+            const container = document.getElementById(field + '-history');
+            container.innerHTML = '';
+            
+            if (history.length === 0) return;
+            
+            history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `<span>📍</span><span>${item}</span>`;
+                div.onclick = () => {
+                    document.getElementById(field).value = item;
+                    container.innerHTML = '';
+                };
+                container.appendChild(div);
+            });
+        }
+        
+        // Initialize
+        window.onload = () => {
+            loadHistory('start');
+            loadHistory('eind');
+            document.getElementById('start').focus();
+            
+            // Restore last values if page refreshed accidentally
+            const lastData = sessionStorage.getItem('lastRitData');
+            if (lastData) {
+                try {
+                    const data = JSON.parse(lastData);
+                    if (confirm('Wil je de vorige rit herstellen?')) {
+                        document.getElementById('start').value = data.start_locatie;
+                        document.getElementById('eind').value = data.eind_locatie;
+                        document.getElementById('km').value = data.kilometers;
+                        document.getElementById('type').value = data.rit_type;
+                        document.getElementById('doel').value = data.doel_omschrijving || '';
+                    }
+                    sessionStorage.removeItem('lastRitData');
+                } catch(e) {}
+            }
+        };
+        
+        // Show history on focus
+        document.getElementById('start').addEventListener('focus', () => loadHistory('start'));
+        document.getElementById('eind').addEventListener('focus', () => loadHistory('eind'));
+        
+        // Hide history on blur
+        document.getElementById('start').addEventListener('blur', () => {
+            setTimeout(() => document.getElementById('start-history').innerHTML = '', 200);
+        });
+        document.getElementById('eind').addEventListener('blur', () => {
+            setTimeout(() => document.getElementById('eind-history').innerHTML = '', 200);
+        });
+        
+        function setKm(km) {
+            document.getElementById('km').value = km;
+        }
+        
+        function swapLocations() {
+            const start = document.getElementById('start').value;
+            const eind = document.getElementById('eind').value;
+            
+            document.getElementById('start').value = eind;
+            document.getElementById('eind').value = start;
+        }
+        
+        function resetForm() {
+            document.getElementById('rit-form').reset();
+            document.getElementById('qr-result').classList.remove('show');
+            document.getElementById('qr-code').innerHTML = '';
+            document.getElementById('start').focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        document.getElementById('rit-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Genereren...<span class="spinner"></span>';
+            
+            const formData = {
+                start_locatie: document.getElementById('start').value.trim(),
+                eind_locatie: document.getElementById('eind').value.trim(),
+                kilometers: parseFloat(document.getElementById('km').value),
+                rit_type: document.getElementById('type').value,
+                doel_omschrijving: document.getElementById('doel').value.trim(),
+                datum: new Date().toISOString().split('T')[0],
+                versie: 'v1',
+                timestamp: new Date().toISOString()
+            };
+            
+            // Save for recovery
+            sessionStorage.setItem('lastRitData', JSON.stringify(formData));
+            
+            // Save to history
+            saveToHistory('start', formData.start_locatie);
+            saveToHistory('eind', formData.eind_locatie);
+            
+            try {
+                // Clear previous QR
+                document.getElementById('qr-code').innerHTML = '';
+                
+                // Generate QR code (client-side!)
+                const qrData = JSON.stringify(formData);
+                
+                new QRCode(document.getElementById('qr-code'), {
+                    text: qrData,
+                    width: 300,
+                    height: 300,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.L
+                });
+                
+                // Show result
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '📱 Genereer QR Code';
+                    document.getElementById('qr-result').classList.add('show');
+                    document.getElementById('qr-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 500);
+                
+            } catch (error) {
+                alert('Fout bij genereren QR code: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '📱 Genereer QR Code';
+            }
+        });
+        
+        // PWA prompt for iOS
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+    </script>
+</body>
+</html>
