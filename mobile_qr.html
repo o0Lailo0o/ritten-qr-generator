@@ -130,20 +130,11 @@
         
         #qr-result {
             display: none;
-            text-align: center;
         }
         
         #qr-result.show {
             display: block;
             animation: fadeIn 0.5s;
-        }
-        
-        #qr-code {
-            margin: 25px 0;
-            padding: 20px;
-            background: white;
-            border-radius: 15px;
-            display: inline-block;
         }
         
         .success-message {
@@ -318,15 +309,52 @@
             margin-bottom: 12px;
         }
         
+        /* ✅ VERBETERDE QR CODE WEERGAVE */
         .qr-item-code {
             text-align: center;
-            padding: 15px;
-            background: white;
+            padding: 0;
+            background: #000000;  /* Zwarte achtergrond */
             border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
         
         .qr-item-code img {
-            border-radius: 8px;
+            display: block;
+            width: 100%;
+            height: auto;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: white;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .qr-item-code:hover img {
+            transform: scale(1.05);
+        }
+        
+        .qr-item-code::after {
+            content: '🔍 Klik voor volledig scherm';
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .qr-item-code:hover::after {
+            opacity: 1;
         }
         
         .delete-btn {
@@ -346,25 +374,73 @@
             background: #cc0000;
         }
         
-        /* ✅ PIXEL-PERFECT QR CODE RENDERING */
-        .qr-item-code img {
-            border-radius: 8px;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: -webkit-crisp-edges;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            width: 300px;
-            height: 300px;
-            background: white;
-            padding: 15px;
+        /* ✅ FULLSCREEN MODAL */
+        .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
         }
         
-        /* Zwarte achtergrond zoals test (optioneel) */
-        .qr-item-code {
-            text-align: center;
+        .qr-modal.show {
+            display: flex;
+        }
+        
+        .qr-modal-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+            background: black;
             padding: 20px;
-            background: #1a1a1a;  /* ← Zwarte achtergrond! */
+            border-radius: 15px;
+        }
+        
+        .qr-modal img {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: white;
+            padding: 30px;
             border-radius: 10px;
+        }
+        
+        .qr-modal-close {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            background: white;
+            color: black;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        }
+        
+        .qr-modal-close:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: #ff4444;
+            color: white;
+        }
+        
+        .qr-modal-info {
+            color: white;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            opacity: 0.8;
         }
     </style>
 </head>
@@ -438,9 +514,10 @@
             
             <div class="tip">
                 <strong>💡 Zo werkt het:</strong><br>
-                1. Houd dit scherm voor je webcam thuis<br>
-                2. Open de desktop app → "Scan QR Code"<br>
-                3. Scan elke QR code - ritten worden automatisch toegevoegd! 🎉
+                1. Klik op QR code voor volledig scherm (zwarte achtergrond)<br>
+                2. Houd scherm voor webcam thuis<br>
+                3. Open desktop app → "Scan QR Code"<br>
+                4. Ritten worden automatisch toegevoegd! 🎉
             </div>
             
             <button type="button" class="btn btn-secondary" onclick="clearAllQR()">
@@ -454,11 +531,21 @@
         </div>
     </div>
     
-    <!-- QRCode.js library -->
+    <!-- ✅ FULLSCREEN MODAL -->
+    <div class="qr-modal" id="qr-modal" onclick="closeModal(event)">
+        <div class="qr-modal-content" onclick="event.stopPropagation()">
+            <button class="qr-modal-close" onclick="closeModal()">✕</button>
+            <img id="modal-qr-img" src="" alt="QR Code">
+            <div class="qr-modal-info" id="modal-info"></div>
+        </div>
+    </div>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
-        // LocalStorage helpers (blijven hetzelfde)
+        let qrCodes = [];
+        
+        // LocalStorage helpers
         function saveToHistory(field, value) {
             if (!value || value.trim() === '') return;
             let history = JSON.parse(localStorage.getItem(field + '_history') || '[]');
@@ -484,9 +571,6 @@
                 container.appendChild(div);
             });
         }
-        
-        // QR Code opslag
-        let qrCodes = [];
         
         function saveQRCode(ritData, qrDataUrl) {
             const qrCode = {
@@ -547,13 +631,42 @@
                         📍 ${qr.data.van} → ${qr.data.naar}<br>
                         📏 ${qr.data.km} km • ${qr.data.type}
                     </div>
-                    <div class="qr-item-code">
-                        <img src="${qr.qrDataUrl}" alt="QR Code" style="width: 300px; height: 300px; image-rendering: pixelated; image-rendering: crisp-edges;">
+                    <div class="qr-item-code" onclick="openModal('${qr.qrDataUrl}', '${qr.data.van} → ${qr.data.naar}', '${qr.data.km} km')">
+                        <img src="${qr.qrDataUrl}" alt="QR Code">
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
+        
+        // ✅ MODAL FUNCTIES
+        function openModal(imgSrc, route, km) {
+            const modal = document.getElementById('qr-modal');
+            const img = document.getElementById('modal-qr-img');
+            const info = document.getElementById('modal-info');
+            
+            img.src = imgSrc;
+            info.innerHTML = `📍 ${route}<br>📏 ${km}<br><br>💡 Houd dit scherm voor je webcam`;
+            modal.classList.add('show');
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeModal(event) {
+            if (!event || event.target === document.getElementById('qr-modal')) {
+                const modal = document.getElementById('qr-modal');
+                modal.classList.remove('show');
+                document.body.style.overflow = 'auto';
+            }
+        }
+        
+        // ESC key om te sluiten
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
         
         function deleteQR(id) {
             if (confirm('Deze QR code verwijderen?')) {
@@ -584,19 +697,14 @@
             }
         }
         
-        // Initialize
         window.onload = () => {
             loadHistory('start');
             loadHistory('eind');
             loadQRsFromStorage();
             updateQRCount();
             document.getElementById('start').focus();
-            if (qrCodes.length > 0) {
-                console.log(`📱 ${qrCodes.length} opgeslagen QR codes geladen!`);
-            }
         };
         
-        // Event listeners
         document.getElementById('start').addEventListener('focus', () => loadHistory('start'));
         document.getElementById('eind').addEventListener('focus', () => loadHistory('eind'));
         document.getElementById('start').addEventListener('blur', () => {
@@ -623,7 +731,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
-        // ✅ VERBETERDE QR GENERATIE - HOGE KWALITEIT!
+        // ✅ QR GENERATIE - ULTRA HOGE KWALITEIT
         document.getElementById('rit-form').addEventListener('submit', (e) => {
             e.preventDefault();
             
@@ -631,7 +739,6 @@
             btn.disabled = true;
             btn.innerHTML = '⏳ Genereren...<span class="spinner"></span>';
             
-            // ✅ COMPACTE DATA (exact zoals Python test)
             const formData = {
                 v: 'v1',
                 van: document.getElementById('start').value.trim(),
@@ -651,30 +758,26 @@
             
             try {
                 const qrData = JSON.stringify(formData);
-                console.log('📊 QR Data:', qrData.length, 'chars');
-                console.log('📄 Data:', qrData);
+                console.log('📊 QR Data:', qrData);
                 
-                // ✅ CREËER HOGE KWALITEIT QR CODE
                 const tempContainer = document.createElement('div');
                 tempContainer.style.position = 'absolute';
                 tempContainer.style.left = '-9999px';
                 document.body.appendChild(tempContainer);
                 
-                // ✅ SETTINGS ZOALS PYTHON (hoogste kwaliteit!)
+                // ✅ MAXIMALE KWALITEIT (zoals test QR)
                 const qr = new QRCode(tempContainer, {
                     text: qrData,
-                    width: 1024,        // ← WAS 300, NU 1024!
-                    height: 1024,       // ← ULTRA SCHERP
+                    width: 1024,        // Ultra hoog
+                    height: 1024,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
+                    correctLevel: QRCode.CorrectLevel.H  // Hoogste error correction
                 });
                 
-                // Wacht tot QR gegenereerd is
                 setTimeout(() => {
                     const img = tempContainer.querySelector('img');
                     if (img && img.src) {
-                        // ✅ Sla HOGE RESOLUTIE op
                         saveQRCode(formData, img.src);
                         updateQRCount();
                         
@@ -685,17 +788,16 @@
                         });
                         
                         resetForm();
-                        console.log('✅ Hoge kwaliteit QR code gegenereerd!');
+                        console.log('✅ Ultra HD QR code gegenereerd (1024x1024px)!');
                     } else {
                         throw new Error('QR code image niet gevonden');
                     }
                     
-                    // Cleanup
                     document.body.removeChild(tempContainer);
                     
                     btn.disabled = false;
                     btn.innerHTML = '📱 Genereer QR Code';
-                }, 800);  // Geef meer tijd voor rendering
+                }, 800);
                 
             } catch (error) {
                 console.error('❌ QR fout:', error);
