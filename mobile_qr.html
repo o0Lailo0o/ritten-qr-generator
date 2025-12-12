@@ -345,6 +345,27 @@
             transform: scale(0.9);
             background: #cc0000;
         }
+        
+        /* ✅ PIXEL-PERFECT QR CODE RENDERING */
+        .qr-item-code img {
+            border-radius: 8px;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            width: 300px;
+            height: 300px;
+            background: white;
+            padding: 15px;
+        }
+        
+        /* Zwarte achtergrond zoals test (optioneel) */
+        .qr-item-code {
+            text-align: center;
+            padding: 20px;
+            background: #1a1a1a;  /* ← Zwarte achtergrond! */
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -435,12 +456,11 @@
     
     <!-- QRCode.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
+
     <script>
-        // LocalStorage helpers
+        // LocalStorage helpers (blijven hetzelfde)
         function saveToHistory(field, value) {
             if (!value || value.trim() === '') return;
-            
             let history = JSON.parse(localStorage.getItem(field + '_history') || '[]');
             history = history.filter(item => item !== value);
             history.unshift(value);
@@ -452,9 +472,7 @@
             const history = JSON.parse(localStorage.getItem(field + '_history') || '[]');
             const container = document.getElementById(field + '-history');
             container.innerHTML = '';
-            
             if (history.length === 0) return;
-            
             history.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'history-item';
@@ -470,18 +488,14 @@
         // QR Code opslag
         let qrCodes = [];
         
-        // QR Code opslag in localStorage (persistent!)
-        function saveQRCode(ritData, qrElement) {
+        function saveQRCode(ritData, qrDataUrl) {
             const qrCode = {
                 id: Date.now(),
                 data: ritData,
                 timestamp: new Date().toISOString(),
-                qrDataUrl: qrElement.querySelector('img').src
+                qrDataUrl: qrDataUrl
             };
-            
             qrCodes.push(qrCode);
-            
-            // NIEUW: Sla op in localStorage
             saveQRsToStorage();
             updateQRList();
         }
@@ -516,7 +530,6 @@
         function updateQRList() {
             const container = document.getElementById('qr-list');
             container.innerHTML = '';
-            
             if (qrCodes.length === 0) return;
             
             qrCodes.forEach((qr, index) => {
@@ -531,11 +544,11 @@
                         <button class="delete-btn" onclick="deleteQR(${qr.id})" title="Verwijder">🗑️</button>
                     </div>
                     <div class="qr-item-info">
-                        📍 ${qr.data.start_locatie} → ${qr.data.eind_locatie}<br>
-                        📏 ${qr.data.kilometers} km • ${qr.data.rit_type}
+                        📍 ${qr.data.van} → ${qr.data.naar}<br>
+                        📏 ${qr.data.km} km • ${qr.data.type}
                     </div>
                     <div class="qr-item-code">
-                        <img src="${qr.qrDataUrl}" alt="QR Code" width="150" height="150">
+                        <img src="${qr.qrDataUrl}" alt="QR Code" style="width: 300px; height: 300px; image-rendering: pixelated; image-rendering: crisp-edges;">
                     </div>
                 `;
                 container.appendChild(card);
@@ -545,7 +558,7 @@
         function deleteQR(id) {
             if (confirm('Deze QR code verwijderen?')) {
                 qrCodes = qrCodes.filter(qr => qr.id !== id);
-                saveQRsToStorage(); // NIEUW: Ook opslaan
+                saveQRsToStorage();
                 updateQRList();
                 updateQRCount();
                 if (qrCodes.length === 0) {
@@ -557,7 +570,7 @@
         function clearAllQR() {
             if (confirm('Alle QR codes wissen?\n\n⚠️ Deze actie kan niet ongedaan gemaakt worden!')) {
                 qrCodes = [];
-                saveQRsToStorage(); // NIEUW: Ook opslaan
+                saveQRsToStorage();
                 updateQRList();
                 document.getElementById('qr-result').classList.remove('show');
                 resetForm();
@@ -571,25 +584,21 @@
             }
         }
         
-        // Initialize - LAAD OPGESLAGEN QR CODES!
+        // Initialize
         window.onload = () => {
             loadHistory('start');
             loadHistory('eind');
-            loadQRsFromStorage(); // NIEUW: Laad opgeslagen QR codes
-            updateQRCount(); // NIEUW: Update teller
+            loadQRsFromStorage();
+            updateQRCount();
             document.getElementById('start').focus();
-            
-            // Toon hoeveel QR codes er zijn
             if (qrCodes.length > 0) {
                 console.log(`📱 ${qrCodes.length} opgeslagen QR codes geladen!`);
             }
         };
         
-        // Show history on focus
+        // Event listeners
         document.getElementById('start').addEventListener('focus', () => loadHistory('start'));
         document.getElementById('eind').addEventListener('focus', () => loadHistory('eind'));
-        
-        // Hide history on blur
         document.getElementById('start').addEventListener('blur', () => {
             setTimeout(() => document.getElementById('start-history').innerHTML = '', 200);
         });
@@ -614,6 +623,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
+        // ✅ VERBETERDE QR GENERATIE - HOGE KWALITEIT!
         document.getElementById('rit-form').addEventListener('submit', (e) => {
             e.preventDefault();
             
@@ -621,51 +631,74 @@
             btn.disabled = true;
             btn.innerHTML = '⏳ Genereren...<span class="spinner"></span>';
             
+            // ✅ COMPACTE DATA (exact zoals Python test)
             const formData = {
-                start_locatie: document.getElementById('start').value.trim(),
-                eind_locatie: document.getElementById('eind').value.trim(),
-                kilometers: parseFloat(document.getElementById('km').value),
-                rit_type: document.getElementById('type').value,
-                doel_omschrijving: document.getElementById('doel').value.trim(),
-                datum: new Date().toISOString().split('T')[0],
-                versie: 'v1',
-                timestamp: new Date().toISOString()
+                v: 'v1',
+                van: document.getElementById('start').value.trim(),
+                naar: document.getElementById('eind').value.trim(),
+                km: parseFloat(document.getElementById('km').value),
+                type: document.getElementById('type').value,
+                datum: new Date().toISOString().split('T')[0]
             };
             
-            // Save to history
-            saveToHistory('start', formData.start_locatie);
-            saveToHistory('eind', formData.eind_locatie);
+            const doel = document.getElementById('doel').value.trim();
+            if (doel) {
+                formData.doel = doel;
+            }
+            
+            saveToHistory('start', formData.van);
+            saveToHistory('eind', formData.naar);
             
             try {
-                const tempContainer = document.createElement('div');
                 const qrData = JSON.stringify(formData);
+                console.log('📊 QR Data:', qrData.length, 'chars');
+                console.log('📄 Data:', qrData);
                 
-                new QRCode(tempContainer, {
+                // ✅ CREËER HOGE KWALITEIT QR CODE
+                const tempContainer = document.createElement('div');
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.left = '-9999px';
+                document.body.appendChild(tempContainer);
+                
+                // ✅ SETTINGS ZOALS PYTHON (hoogste kwaliteit!)
+                const qr = new QRCode(tempContainer, {
                     text: qrData,
-                    width: 300,
-                    height: 300,
+                    width: 1024,        // ← WAS 300, NU 1024!
+                    height: 1024,       // ← ULTRA SCHERP
                     colorDark: "#000000",
                     colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.L
+                    correctLevel: QRCode.CorrectLevel.H
                 });
                 
+                // Wacht tot QR gegenereerd is
                 setTimeout(() => {
-                    saveQRCode(formData, tempContainer);
-                    updateQRCount(); // NIEUW: Update teller
+                    const img = tempContainer.querySelector('img');
+                    if (img && img.src) {
+                        // ✅ Sla HOGE RESOLUTIE op
+                        saveQRCode(formData, img.src);
+                        updateQRCount();
+                        
+                        document.getElementById('qr-result').classList.add('show');
+                        document.getElementById('qr-result').scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                        
+                        resetForm();
+                        console.log('✅ Hoge kwaliteit QR code gegenereerd!');
+                    } else {
+                        throw new Error('QR code image niet gevonden');
+                    }
                     
-                    document.getElementById('qr-result').classList.add('show');
-                    document.getElementById('qr-result').scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
-                    });
-                    
-                    resetForm();
+                    // Cleanup
+                    document.body.removeChild(tempContainer);
                     
                     btn.disabled = false;
                     btn.innerHTML = '📱 Genereer QR Code';
-                }, 500);
+                }, 800);  // Geef meer tijd voor rendering
                 
             } catch (error) {
+                console.error('❌ QR fout:', error);
                 alert('Fout bij genereren QR code: ' + error.message);
                 btn.disabled = false;
                 btn.innerHTML = '📱 Genereer QR Code';
