@@ -374,7 +374,7 @@
             background: #cc0000;
         }
         
-        /* ✅ FULLSCREEN MODAL */
+        /* ✅ FULLSCREEN MODAL - PURE ZWART MET ALLEEN QR CODE */
         .qr-modal {
             display: none;
             position: fixed;
@@ -382,7 +382,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.95);
+            background: #000000;  /* Pure zwart */
             z-index: 9999;
             justify-content: center;
             align-items: center;
@@ -395,53 +395,54 @@
         
         .qr-modal-content {
             position: relative;
-            max-width: 90vw;
-            max-height: 90vh;
-            background: black;
-            padding: 20px;
-            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
         }
         
         .qr-modal img {
             display: block;
-            max-width: 100%;
-            max-height: 80vh;
+            width: auto;
+            height: auto;
+            max-width: 90vw;
+            max-height: 90vh;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             background: white;
-            padding: 30px;
-            border-radius: 10px;
+            padding: 40px;
+            border-radius: 0;  /* Geen afgeronde hoeken */
+            box-shadow: 0 0 100px rgba(255,255,255,0.3);  /* Subtiele glow */
         }
         
+        /* Sluit knop - subtiel in hoek */
         .qr-modal-close {
-            position: absolute;
-            top: -15px;
-            right: -15px;
-            background: white;
-            color: black;
-            border: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             width: 50px;
             height: 50px;
             font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             transition: all 0.2s;
+            backdrop-filter: blur(10px);
+            z-index: 10000;
         }
         
         .qr-modal-close:hover {
+            background: rgba(255, 68, 68, 0.9);
+            border-color: rgba(255, 68, 68, 0.9);
             transform: scale(1.1) rotate(90deg);
-            background: #ff4444;
-            color: white;
         }
         
-        .qr-modal-info {
-            color: white;
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-            opacity: 0.8;
-        }
+        /* GEEN info tekst meer - puur QR code */
     </style>
 </head>
 <body>
@@ -531,12 +532,11 @@
         </div>
     </div>
     
-    <!-- ✅ FULLSCREEN MODAL -->
+    <!-- ✅ FULLSCREEN MODAL - PURE ZWART, ALLEEN QR CODE -->
     <div class="qr-modal" id="qr-modal" onclick="closeModal(event)">
         <div class="qr-modal-content" onclick="event.stopPropagation()">
             <button class="qr-modal-close" onclick="closeModal()">✕</button>
             <img id="modal-qr-img" src="" alt="QR Code">
-            <div class="qr-modal-info" id="modal-info"></div>
         </div>
     </div>
     
@@ -639,14 +639,12 @@
             });
         }
         
-        // ✅ MODAL FUNCTIES
+        // ✅ MODAL FUNCTIES - PURE QR CODE WEERGAVE
         function openModal(imgSrc, route, km) {
             const modal = document.getElementById('qr-modal');
             const img = document.getElementById('modal-qr-img');
-            const info = document.getElementById('modal-info');
             
             img.src = imgSrc;
-            info.innerHTML = `📍 ${route}<br>📏 ${km}<br><br>💡 Houd dit scherm voor je webcam`;
             modal.classList.add('show');
             
             // Prevent body scroll
